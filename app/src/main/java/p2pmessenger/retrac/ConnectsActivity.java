@@ -1,26 +1,10 @@
 package p2pmessenger.retrac;
 
-import android.content.Context;
-import android.content.Intent;
-import android.net.DhcpInfo;
-import android.net.wifi.WifiManager;
-import android.net.wifi.p2p.WifiP2pManager;
-import android.os.AsyncTask;
 import android.support.v7.app.AppCompatActivity;
 import android.os.Bundle;
-import android.util.Log;
 import android.view.View;
 import android.widget.Button;
 import android.widget.TextView;
-import android.widget.Toast;
-
-import java.io.IOException;
-import java.io.Serializable;
-import java.net.DatagramPacket;
-import java.net.DatagramSocket;
-import java.net.InetAddress;
-import java.net.ServerSocket;
-import java.net.SocketException;
 import java.util.Map;
 
 public class ConnectsActivity extends AppCompatActivity {
@@ -43,22 +27,24 @@ public class ConnectsActivity extends AppCompatActivity {
             @Override
             public void onClick(View view) {
                 ServiceSearcher serviceSearcher = new ServiceSearcher(getApplicationContext());
-                serviceSearcher.start();
+                serviceSearcher.execute();
             }
         });
         receiveButton.setOnClickListener(new View.OnClickListener() {
             @Override
             public void onClick(View view) {
                 ServiceAdvertiser serviceAdvertiser = new ServiceAdvertiser(getApplicationContext());
-                serviceAdvertiser.start();
+                serviceAdvertiser.execute();
             }
         });
         connectButton.setOnClickListener(new View.OnClickListener() {
             @Override
             public void onClick(View view) {
                 Map<String, String>record = P2pApplication.get().peers.get(0);
-                textView.setText(record.get("name"));
-                P2pConnection connection = new P2pConnection(getBaseContext(),record.get("SSID"),record.get("Password"),record.get("InetAddress"));
+                textView.setText(record.get(ServiceAdvertiser.NAME));
+                P2pConnection connection = new P2pConnection(getBaseContext(),record.get(
+                        ServiceAdvertiser.SSID),record.get(ServiceAdvertiser.PASSWORD),
+                        record.get(ServiceAdvertiser.INET_ADDRESS));
             }
         });
     }

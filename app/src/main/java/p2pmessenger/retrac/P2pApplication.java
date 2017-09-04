@@ -11,33 +11,40 @@ import java.util.Map;
  * Created by Bastian Wieck on 9/3/2017.
  */
 
-public class P2pApplication extends Application {
+class P2pApplication extends Application {
     private static P2pApplication app;
     Activity mActivity;
     List<Map<String, String>> peers;
 
     private P2pApplication(){
-        // fixme pick the best list
         peers = new ArrayList<>();
     }
 
-    public static P2pApplication get(){
+    static P2pApplication get(){
         if(app == null){
             app = new P2pApplication();
         }
         return app;
     }
 
-    public void updateActivity(Activity activity){
+    void updateActivity(Activity activity){
         this.mActivity = activity;
     }
 
-    public void addPeer(Map<String, String> record){
-        // fixme check if already in list
+    void addPeer(Map<String, String> record){
+        int ind = 0;
+        for(Map<String, String> item : peers){
+            if(item.get(ServiceAdvertiser.NAME).equals(record.get(ServiceAdvertiser.NAME))){
+                // updating the record instead of creating a new one
+                peers.add(ind,record);
+                return;
+            }
+            ind++;
+        }
         peers.add(record);
     }
 
-    public void removePeer(String info){
+    void removePeer(String info){
         // FIXME
     }
 }

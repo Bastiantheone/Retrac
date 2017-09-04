@@ -12,10 +12,8 @@ import android.os.AsyncTask;
 import android.util.Log;
 
 import java.io.IOException;
-import java.net.Inet4Address;
 import java.net.InetAddress;
 import java.net.ServerSocket;
-import java.net.SocketAddress;
 import java.util.HashMap;
 import java.util.Map;
 
@@ -27,27 +25,38 @@ import static android.net.wifi.p2p.WifiP2pManager.WIFI_P2P_STATE_CHANGED_ACTION;
  */
 
 // ServiceAdvertiser receives broadcasts when the status changed.
-class ServiceAdvertiser implements WifiP2pManager.ChannelListener{
+class ServiceAdvertiser extends AsyncTask<Void,Void,Void> implements WifiP2pManager.ChannelListener{
     private static final String TAG = "ServiceAdvertiser";
+
     static final String SERVICE_TYPE = "_presence._tcp";
     static final String INSTANCE_NAME = "_retrac";
+    static final String SSID = "ssid";
+    static final String PASSWORD = "password";
+    static final String NAME = "name";
+    static final String INET_ADDRESS = "inetaddress";
 
     private WifiP2pManager wifiP2pManager;
     private WifiP2pManager.Channel mChannel;
     private BroadcastReceiver mReceiver;
     private IntentFilter mIntentFilter;
 
-    Context mContext;
+    private Context mContext;
 
-    String mInetAddress;
-    String mSSID;
-    String mPassword = "";
+    private String mInetAddress;
+    private String mSSID;
+    private String mPassword = "";
 
-    public ServiceAdvertiser(Context context) {
+    ServiceAdvertiser(Context context) {
         this.mContext = context;
     }
 
-    public void start(){
+    @Override
+    public Void doInBackground(Void... params){
+        start();
+        return null;
+    }
+
+    private void start(){
         wifiP2pManager = (WifiP2pManager) mContext.getSystemService(Context.WIFI_P2P_SERVICE);
         if(wifiP2pManager == null){
             Log.d(TAG,"Device doesn't support P2P");
@@ -74,7 +83,7 @@ class ServiceAdvertiser implements WifiP2pManager.ChannelListener{
         });
     }
 
-    void stop() {
+    public void stop() {
         this.mContext.unregisterReceiver(mReceiver);
         stopLocalServices();
         removeGroup();
@@ -82,13 +91,13 @@ class ServiceAdvertiser implements WifiP2pManager.ChannelListener{
 
     // startLocalService starts a local service to advertise the SSID and the Password so that another Peer
     // can connect to this phone without user interaction.
-    void startLocalService(){
+    private void startLocalService(){
         Map<String, String> record = new HashMap<String, String>();
         // Todo add username here
-        record.put("name","testname");
-        record.put("SSID",mSSID);
-        record.put("Password",mPassword);
-        record.put("InetAddress",mInetAddress);
+        record.put(NAME,"testname");
+        record.put(SSID,mSSID);
+        record.put(PASSWORD,mPassword);
+        record.put(INET_ADDRESS,mInetAddress);
 
         WifiP2pDnsSdServiceInfo service = WifiP2pDnsSdServiceInfo.newInstance( INSTANCE_NAME, SERVICE_TYPE, record);
 
@@ -104,7 +113,7 @@ class ServiceAdvertiser implements WifiP2pManager.ChannelListener{
         });
     }
 
-    void stopLocalServices() {
+    private void stopLocalServices() {
         wifiP2pManager.clearLocalServices(mChannel, new WifiP2pManager.ActionListener() {
             public void onSuccess() {
                 Log.d(TAG, "Cleared local services");
@@ -116,7 +125,7 @@ class ServiceAdvertiser implements WifiP2pManager.ChannelListener{
         });
     }
 
-    void removeGroup() {
+    private void removeGroup() {
         wifiP2pManager.removeGroup(mChannel,new WifiP2pManager.ActionListener() {
             public void onSuccess() {
                 Log.d(TAG, "Cleared Local Group ");
@@ -158,6 +167,8 @@ class ServiceAdvertiser implements WifiP2pManager.ChannelListener{
             wifiP2pManager.requestConnectionInfo(mChannel, new WifiP2pManager.ConnectionInfoListener() {
                 @Override
                 public void onConnectionInfoAvailable(WifiP2pInfo wifiP2pInfo) {
+                    if(wifiP2pInfo==null)
+                        return;
                     mInetAddress = wifiP2pInfo.groupOwnerAddress.getHostAddress();
                     new ServerSocketAsync().execute();
                     getExtraGroupInfo();
@@ -187,7 +198,8 @@ class ServiceAdvertiser implements WifiP2pManager.ChannelListener{
         public Void doInBackground(Void... params){
             try {
                 Log.d("ServerSocketAsync", "start server socket");
-                ServerSocket serverSocket = new ServerSocket(8888,10,InetAddress.getByName(mInetAddress));
+                // 1 needs to be changed to a higher number for group chats
+                ServerSocket serverSocket = new ServerSocket(P2pConnection.PORT);//,1,InetAddress.getByName(mInetAddress));
                 Log.d("ServerSocketAsync", "doInBackground: "+serverSocket.getInetAddress().getHostAddress());
                 while (true){
                     try {
