@@ -2,7 +2,9 @@ package p2pmessenger.retrac;
 
 import android.app.Activity;
 import android.app.Application;
+import android.util.Log;
 
+import java.net.Socket;
 import java.util.ArrayList;
 import java.util.List;
 import java.util.Map;
@@ -12,9 +14,14 @@ import java.util.Map;
  */
 
 class P2pApplication extends Application {
+    private static final String TAG = "P2pApplication";
     private static P2pApplication app;
-    Activity mActivity;
+    P2pActivity mActivity;
     List<Map<String, String>> peers;
+
+    ServiceSearcher serviceSearcher;
+    ServiceAdvertiser serviceAdvertiser;
+    P2pConnection connection;
 
     private P2pApplication(){
         peers = new ArrayList<>();
@@ -27,11 +34,16 @@ class P2pApplication extends Application {
         return app;
     }
 
-    void updateActivity(Activity activity){
+    void connected(Socket socket){
+        
+    }
+
+    void updateActivity(P2pActivity activity){
         this.mActivity = activity;
     }
 
     void addPeer(Map<String, String> record){
+        // FIXME add time stamp and add regular check to see if service is still advertised
         int ind = 0;
         for(Map<String, String> item : peers){
             if(item.get(ServiceAdvertiser.NAME).equals(record.get(ServiceAdvertiser.NAME))){
@@ -41,10 +53,51 @@ class P2pApplication extends Application {
             }
             ind++;
         }
+        mActivity.notifyChange(record.get(ServiceAdvertiser.NAME));
         peers.add(record);
     }
 
     void removePeer(String info){
         // FIXME
+    }
+
+    public void setConnection(P2pConnection connection){
+        this.connection = connection;
+    }
+
+    public void start(){
+        Log.d(TAG, "start: ");
+        serviceAdvertiser = new ServiceAdvertiser(mActivity.getApplicationContext());
+        serviceAdvertiser.execute();
+        serviceSearcher = new ServiceSearcher(mActivity.getApplicationContext());
+        serviceSearcher.execute();
+    }
+
+    public void stop(){
+        Log.d(TAG, "stop: ");
+        stopDiscovery();
+        if(connection!=null){
+            connection.stop();
+        }
+        try {
+            serviceAdvertiser.stop();
+        }catch (NullPointerException e){
+            e.printStackTrace();
+        }catch (IllegalArgumentException e){
+            e.printStackTrace();
+        }
+        try {
+            serviceSearcher.stop();
+        }catch (NullPointerException e){
+            e.printStackTrace();
+        }catch (IllegalArgumentException e){
+            e.printStackTrace();
+        }
+    }
+    
+    void stopDiscovery(){
+        Log.d(TAG, "stopDiscovery: ");
+        serviceAdvertiser.stopKeepGroup();
+        serviceSearcher.stop();
     }
 }

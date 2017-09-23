@@ -44,7 +44,7 @@ class ServiceSearcher extends AsyncTask<Void,Void,Void> implements WifiP2pManage
     // sleep to take load of cpu
     private void sleep(){
         try {
-            Thread.sleep(1000);
+            Thread.sleep(500);
         }catch (InterruptedException e){
             e.printStackTrace();
         }
@@ -70,16 +70,38 @@ class ServiceSearcher extends AsyncTask<Void,Void,Void> implements WifiP2pManage
                 Log.d(TAG, "onDnsSdTxtRecordAvailable: "+fullDomain);
                 P2pApplication.get().addPeer(record);
                 sleep();
-                startPeerDiscovery();
+                startPeerRequest();
             }
         });
         sleep();
-        startPeerDiscovery();
+        startPeerRequest();
     }
 
     public void stop(){
-        mContext.unregisterReceiver(mReceiver);
         run = false;
+        mWifiP2pManager.clearServiceRequests(mChannel, new WifiP2pManager.ActionListener() {
+            @Override
+            public void onSuccess() {
+                Log.d(TAG, "Clear Services onSuccess: ");
+            }
+
+            @Override
+            public void onFailure(int reason) {
+                Log.d(TAG, "clear services onFailure: "+reason);
+            }
+        });
+        mWifiP2pManager.stopPeerDiscovery(mChannel, new WifiP2pManager.ActionListener() {
+            @Override
+            public void onSuccess() {
+                Log.d(TAG, "Stop Peer discovery onSuccess: ");
+            }
+
+            @Override
+            public void onFailure(int reason) {
+                Log.d(TAG, "Stop peer discovery onFailure: "+reason);
+            }
+        });
+        mContext.unregisterReceiver(mReceiver);
     }
 
     private void startPeerRequest(){
@@ -103,12 +125,14 @@ class ServiceSearcher extends AsyncTask<Void,Void,Void> implements WifiP2pManage
         mWifiP2pManager.discoverPeers(mChannel, new WifiP2pManager.ActionListener() {
             @Override
             public void onSuccess() {
-                Log.d(TAG, "onSuccess: ");
+                Log.d(TAG, "Discover Peers onSuccess: ");
             }
 
             @Override
             public void onFailure(int reason) {
-                Log.d(TAG, "onFailure: "+reason);
+                Log.d(TAG, "Discover Peers onFailure: "+reason);
+                sleep();
+                startPeerRequest();
             }
         });
     }

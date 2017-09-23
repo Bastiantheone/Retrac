@@ -83,9 +83,17 @@ class ServiceAdvertiser extends AsyncTask<Void,Void,Void> implements WifiP2pMana
         });
     }
 
-    public void stop() {
-        this.mContext.unregisterReceiver(mReceiver);
+    public void stopKeepGroup(){
+        try {
+            this.mContext.unregisterReceiver(mReceiver);
+        }catch (IllegalArgumentException e){
+            e.printStackTrace();
+        }
         stopLocalServices();
+    }
+
+    public void stop() {
+        stopKeepGroup();
         removeGroup();
     }
 
@@ -164,19 +172,6 @@ class ServiceAdvertiser extends AsyncTask<Void,Void,Void> implements WifiP2pMana
         }
 
         private void getGroupInfo(){
-            wifiP2pManager.requestConnectionInfo(mChannel, new WifiP2pManager.ConnectionInfoListener() {
-                @Override
-                public void onConnectionInfoAvailable(WifiP2pInfo wifiP2pInfo) {
-                    if(wifiP2pInfo==null)
-                        return;
-                    mInetAddress = wifiP2pInfo.groupOwnerAddress.getHostAddress();
-                    new ServerSocketAsync().execute();
-                    getExtraGroupInfo();
-                }
-            });
-        }
-
-        private void getExtraGroupInfo(){
             wifiP2pManager.requestGroupInfo(mChannel, new WifiP2pManager.GroupInfoListener() {
                 @Override
                 public void onGroupInfoAvailable(WifiP2pGroup wifiP2pGroup) {
@@ -187,9 +182,26 @@ class ServiceAdvertiser extends AsyncTask<Void,Void,Void> implements WifiP2pMana
                     Log.d(TAG,"onGroupInfoAvailable");
                     mSSID = wifiP2pGroup.getNetworkName();
                     mPassword = wifiP2pGroup.getPassphrase();
-                    startLocalService();
+                    getExtraGroupInfo();
                 }
             });
+        }
+
+        private void getExtraGroupInfo(){
+            wifiP2pManager.requestConnectionInfo(mChannel, new WifiP2pManager.ConnectionInfoListener() {
+                @Override
+                public void onConnectionInfoAvailable(WifiP2pInfo wifiP2pInfo) {
+                    if(wifiP2pInfo==null || wifiP2pInfo.groupOwnerAddress==null) {
+                        Log.d(TAG, "onConnectionInfoAvailable: null");
+                        return;
+                    }
+                    mInetAddress = wifiP2pInfo.groupOwnerAddress.getHostAddress();
+                    Log.d(TAG, "onConnectionInfoAvailable: "+mInetAddress);
+                    startLocalService();
+                    new ServerSocketAsync().execute();
+                }
+            });
+
         }
     }
 
@@ -203,8 +215,8 @@ class ServiceAdvertiser extends AsyncTask<Void,Void,Void> implements WifiP2pMana
                 Log.d("ServerSocketAsync", "doInBackground: "+serverSocket.getInetAddress().getHostAddress());
                 while (true){
                     try {
-                        Log.d("ServerSocketAsync", "socket.accept");
                         serverSocket.accept();
+                        Log.d("ServerSocketAsync", "socket.accept");
                     }catch (Exception e){
                         e.printStackTrace();
                         serverSocket.close();

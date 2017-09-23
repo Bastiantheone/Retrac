@@ -40,6 +40,8 @@ class P2pConnection {
         this.mContext = context;
         mInetAddress = inetAddress;
 
+        P2pApplication.get().stopDiscovery();
+
         receiver = new ConnectionBroadcast();
         IntentFilter filter = new IntentFilter();
         filter.addAction(WifiManager.NETWORK_STATE_CHANGED_ACTION);
@@ -54,25 +56,38 @@ class P2pConnection {
         this.netId = this.mWifiManager.addNetwork(this.mWifiConfiguration);
         this.mWifiManager.enableNetwork(this.netId, false);
         this.mWifiManager.reconnect();
-        new ClientSocketAsync().execute(mInetAddress);
     }
 
     public void stop(){
         this.mWifiManager.disconnect();
     }
 
-    private class ClientSocketAsync extends AsyncTask<String,Void,Void>{
+    private class ClientSocketAsync extends AsyncTask<Void,Void,Socket>{
+        String mInetAddress;
+        ClientSocketAsync(String inetAddress){
+            super();
+            Log.d(TAG, "ClientSocketAsync: ");
+            mInetAddress = inetAddress;
+        }
         @Override
-        public Void doInBackground(String... params){
-            Log.d(TAG, "doInBackground: connect socket "+params[0]);
+        public Socket doInBackground(Void... params){
+            Log.d(TAG, "doInBackground: connect socket "+mInetAddress);
             Socket socket = new Socket();
             try {
                 socket.bind(null);
-                socket.connect(new InetSocketAddress(params[0],PORT), 5000);
+                socket.connect(new InetSocketAddress(mInetAddress,PORT), 5000);
             }catch (IOException e){
                 e.printStackTrace();
+                return null;
             }
-            return null;
+            return socket;
+        }
+
+        @Override
+        public void onPostExecute(Socket socket){
+            if (socket != null) {
+                P2pApplication.get().connected(socket);
+            }
         }
     }
 
@@ -83,8 +98,8 @@ class P2pConnection {
             if(WifiManager.NETWORK_STATE_CHANGED_ACTION.equals(action)){
                 WifiInfo info = intent.getParcelableExtra(WifiManager.EXTRA_WIFI_INFO);
                 if(info != null){
-                    Log.d(TAG, "onReceive: "+info.getIpAddress());
-                    new ClientSocketAsync().execute(mInetAddress);
+                    Log.d(TAG, "Network changed onReceive: "+info.getSSID()+" Inet: "+mInetAddress);
+                    new ClientSocketAsync(mInetAddress).execute();
                 }
             }
         }
