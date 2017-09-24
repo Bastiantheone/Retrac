@@ -2,6 +2,7 @@ package p2pmessenger.retrac;
 
 import android.app.Activity;
 import android.app.Application;
+import android.os.AsyncTask;
 import android.util.Log;
 
 import java.net.Socket;
@@ -67,10 +68,10 @@ class P2pApplication extends Application {
 
     public void start(){
         Log.d(TAG, "start: ");
-        serviceAdvertiser = new ServiceAdvertiser(mActivity.getApplicationContext());
-        serviceAdvertiser.execute();
         serviceSearcher = new ServiceSearcher(mActivity.getApplicationContext());
-        serviceSearcher.execute();
+        serviceSearcher.executeOnExecutor(AsyncTask.THREAD_POOL_EXECUTOR);
+        serviceAdvertiser = new ServiceAdvertiser(mActivity.getApplicationContext());
+        serviceAdvertiser.executeOnExecutor(AsyncTask.THREAD_POOL_EXECUTOR);
     }
 
     public void stop(){
@@ -85,6 +86,10 @@ class P2pApplication extends Application {
             e.printStackTrace();
         }catch (IllegalArgumentException e){
             e.printStackTrace();
+        }try {
+            serviceAdvertiser.cancel(true);
+        }catch (NullPointerException e){
+            e.printStackTrace();
         }
         try {
             serviceSearcher.stop();
@@ -92,12 +97,18 @@ class P2pApplication extends Application {
             e.printStackTrace();
         }catch (IllegalArgumentException e){
             e.printStackTrace();
+        }try {
+            serviceSearcher.cancel(true);
+        }catch (NullPointerException e){
+            e.printStackTrace();
         }
     }
     
     void stopDiscovery(){
         Log.d(TAG, "stopDiscovery: ");
-        serviceAdvertiser.stopKeepGroup();
+        serviceAdvertiser.stop();
         serviceSearcher.stop();
+        serviceSearcher.cancel(true);
+        serviceAdvertiser.cancel(false);
     }
 }

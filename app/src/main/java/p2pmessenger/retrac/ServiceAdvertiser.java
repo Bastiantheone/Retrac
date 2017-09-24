@@ -40,6 +40,10 @@ class ServiceAdvertiser extends AsyncTask<Void,Void,Void> implements WifiP2pMana
     private BroadcastReceiver mReceiver;
     private IntentFilter mIntentFilter;
 
+    boolean advertising;
+    ServerSocketAsync server;
+    ServerSocket serverSocket;
+
     private Context mContext;
 
     private String mInetAddress;
@@ -84,12 +88,20 @@ class ServiceAdvertiser extends AsyncTask<Void,Void,Void> implements WifiP2pMana
     }
 
     public void stopKeepGroup(){
+        Log.d(TAG, "stopKeepGroup: ");
         try {
             this.mContext.unregisterReceiver(mReceiver);
         }catch (IllegalArgumentException e){
             e.printStackTrace();
         }
         stopLocalServices();
+        try {
+            serverSocket.close();
+        }catch (Exception e) {
+            e.printStackTrace();
+        }
+
+        server.cancel(true);
     }
 
     public void stop() {
@@ -131,6 +143,7 @@ class ServiceAdvertiser extends AsyncTask<Void,Void,Void> implements WifiP2pMana
                 Log.d(TAG, "Clearing local services failed, error code " + reason);
             }
         });
+
     }
 
     private void removeGroup() {
@@ -197,8 +210,12 @@ class ServiceAdvertiser extends AsyncTask<Void,Void,Void> implements WifiP2pMana
                     }
                     mInetAddress = wifiP2pInfo.groupOwnerAddress.getHostAddress();
                     Log.d(TAG, "onConnectionInfoAvailable: "+mInetAddress);
+                    if(advertising)
+                        return;
+                    advertising = true;
                     startLocalService();
-                    new ServerSocketAsync().execute();
+                    server = new ServerSocketAsync();
+                    server.executeOnExecutor(THREAD_POOL_EXECUTOR);
                 }
             });
 
@@ -211,22 +228,24 @@ class ServiceAdvertiser extends AsyncTask<Void,Void,Void> implements WifiP2pMana
             try {
                 Log.d("ServerSocketAsync", "start server socket");
                 // 1 needs to be changed to a higher number for group chats
-                ServerSocket serverSocket = new ServerSocket(P2pConnection.PORT);//,1,InetAddress.getByName(mInetAddress));
+                serverSocket = new ServerSocket(P2pConnection.PORT);//,1,InetAddress.getByName(mInetAddress));
                 Log.d("ServerSocketAsync", "doInBackground: "+serverSocket.getInetAddress().getHostAddress());
-                while (true){
-                    try {
-                        serverSocket.accept();
-                        Log.d("ServerSocketAsync", "socket.accept");
-                    }catch (Exception e){
-                        e.printStackTrace();
-                        serverSocket.close();
-                        break;
-                    }
+                try {
+                    serverSocket.accept();
+                    Log.d("ServerSocketAsync", "socket.accept");
+                }catch (Exception e){
+                    e.printStackTrace();
+                    serverSocket.close();
                 }
             }catch (IOException e){
                 e.printStackTrace();
             }
             return null;
+        }
+
+        @Override
+        public void onPostExecute(Void v){
+            Log.d("ServerSocketAsync", "onPostExecute: ");
         }
     }
 }

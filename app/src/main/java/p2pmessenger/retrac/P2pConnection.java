@@ -35,12 +35,15 @@ class P2pConnection {
     private int netId = 0;
     private String mInetAddress = "";
 
+    ClientSocketAsync client;
+
     P2pConnection(Context context, String ssid, String password, String inetAddress){
         Log.d(TAG, "P2pConnection: "+ssid+", "+password+", "+inetAddress);
         this.mContext = context;
         mInetAddress = inetAddress;
 
         P2pApplication.get().stopDiscovery();
+
 
         receiver = new ConnectionBroadcast();
         IntentFilter filter = new IntentFilter();
@@ -60,6 +63,8 @@ class P2pConnection {
 
     public void stop(){
         this.mWifiManager.disconnect();
+        client.cancel(true);
+
     }
 
     private class ClientSocketAsync extends AsyncTask<Void,Void,Socket>{
@@ -79,6 +84,8 @@ class P2pConnection {
             }catch (IOException e){
                 e.printStackTrace();
                 return null;
+            }catch (Exception e){
+                e.printStackTrace();
             }
             return socket;
         }
@@ -86,6 +93,7 @@ class P2pConnection {
         @Override
         public void onPostExecute(Socket socket){
             if (socket != null) {
+                Log.d(TAG, "onPostExecute: success");
                 P2pApplication.get().connected(socket);
             }
         }
@@ -99,7 +107,9 @@ class P2pConnection {
                 WifiInfo info = intent.getParcelableExtra(WifiManager.EXTRA_WIFI_INFO);
                 if(info != null){
                     Log.d(TAG, "Network changed onReceive: "+info.getSSID()+" Inet: "+mInetAddress);
-                    new ClientSocketAsync(mInetAddress).execute();
+
+                    client = new ClientSocketAsync(mInetAddress);
+                    client.executeOnExecutor(AsyncTask.THREAD_POOL_EXECUTOR);
                 }
             }
         }
