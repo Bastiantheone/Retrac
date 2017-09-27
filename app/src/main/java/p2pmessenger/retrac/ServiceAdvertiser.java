@@ -67,6 +67,17 @@ class ServiceAdvertiser extends AsyncTask<Void,Void,Void> implements WifiP2pMana
             return;
         }
         mChannel = wifiP2pManager.initialize(this.mContext, this.mContext.getMainLooper(), this);
+        wifiP2pManager.clearLocalServices(mChannel, new WifiP2pManager.ActionListener() {
+            @Override
+            public void onSuccess() {
+                Log.d(TAG, "onSuccess: clear local services");
+            }
+
+            @Override
+            public void onFailure(int reason) {
+                Log.d(TAG, "onFailure: "+reason);
+            }
+        });
 
         mReceiver = new GroupInfoReceiver();
         mIntentFilter = new IntentFilter();
@@ -97,6 +108,7 @@ class ServiceAdvertiser extends AsyncTask<Void,Void,Void> implements WifiP2pMana
         stopLocalServices();
         try {
             serverSocket.close();
+            Log.d(TAG, "stopKeepGroup: socket closed");
         }catch (Exception e) {
             e.printStackTrace();
         }
@@ -109,12 +121,14 @@ class ServiceAdvertiser extends AsyncTask<Void,Void,Void> implements WifiP2pMana
         removeGroup();
     }
 
+
+
     // startLocalService starts a local service to advertise the SSID and the Password so that another Peer
     // can connect to this phone without user interaction.
     private void startLocalService(){
         Map<String, String> record = new HashMap<String, String>();
         // Todo add username here
-        record.put(NAME,"testname");
+        record.put(NAME,"test username");
         record.put(SSID,mSSID);
         record.put(PASSWORD,mPassword);
         record.put(INET_ADDRESS,mInetAddress);
@@ -226,16 +240,19 @@ class ServiceAdvertiser extends AsyncTask<Void,Void,Void> implements WifiP2pMana
         @Override
         public Void doInBackground(Void... params){
             try {
-                Log.d("ServerSocketAsync", "start server socket");
+                Log.d(TAG, "start server socket");
                 // 1 needs to be changed to a higher number for group chats
                 serverSocket = new ServerSocket(P2pConnection.PORT);//,1,InetAddress.getByName(mInetAddress));
-                Log.d("ServerSocketAsync", "doInBackground: "+serverSocket.getInetAddress().getHostAddress());
-                try {
-                    serverSocket.accept();
-                    Log.d("ServerSocketAsync", "socket.accept");
-                }catch (Exception e){
-                    e.printStackTrace();
-                    serverSocket.close();
+                Log.d(TAG, "doInBackground: "+serverSocket.getInetAddress().getHostAddress());
+                while (true) {
+                    try {
+                        serverSocket.accept();
+                        Log.d(TAG, "socket.accept");
+                    } catch (IOException e) {
+                        e.printStackTrace();
+                        serverSocket.close();
+                        break;
+                    }
                 }
             }catch (IOException e){
                 e.printStackTrace();
