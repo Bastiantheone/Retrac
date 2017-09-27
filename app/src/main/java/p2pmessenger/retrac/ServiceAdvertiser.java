@@ -11,9 +11,14 @@ import android.net.wifi.p2p.nsd.WifiP2pDnsSdServiceInfo;
 import android.os.AsyncTask;
 import android.util.Log;
 
+import java.io.BufferedReader;
 import java.io.IOException;
+import java.io.InputStream;
+import java.io.InputStreamReader;
 import java.net.InetAddress;
+import java.net.InetSocketAddress;
 import java.net.ServerSocket;
+import java.net.Socket;
 import java.util.HashMap;
 import java.util.Map;
 
@@ -33,20 +38,14 @@ class ServiceAdvertiser extends AsyncTask<Void,Void,Void> implements WifiP2pMana
     static final String SSID = "ssid";
     static final String PASSWORD = "password";
     static final String NAME = "name";
-    static final String INET_ADDRESS = "inetaddress";
 
     private WifiP2pManager wifiP2pManager;
     private WifiP2pManager.Channel mChannel;
     private BroadcastReceiver mReceiver;
     private IntentFilter mIntentFilter;
 
-    boolean advertising;
-    ServerSocketAsync server;
-    ServerSocket serverSocket;
-
     private Context mContext;
 
-    private String mInetAddress;
     private String mSSID;
     private String mPassword = "";
 
@@ -106,14 +105,6 @@ class ServiceAdvertiser extends AsyncTask<Void,Void,Void> implements WifiP2pMana
             e.printStackTrace();
         }
         stopLocalServices();
-        try {
-            serverSocket.close();
-            Log.d(TAG, "stopKeepGroup: socket closed");
-        }catch (Exception e) {
-            e.printStackTrace();
-        }
-
-        server.cancel(true);
     }
 
     public void stop() {
@@ -131,11 +122,10 @@ class ServiceAdvertiser extends AsyncTask<Void,Void,Void> implements WifiP2pMana
         record.put(NAME,"test username");
         record.put(SSID,mSSID);
         record.put(PASSWORD,mPassword);
-        record.put(INET_ADDRESS,mInetAddress);
 
         WifiP2pDnsSdServiceInfo service = WifiP2pDnsSdServiceInfo.newInstance( INSTANCE_NAME, SERVICE_TYPE, record);
 
-        Log.d(TAG,"Add local service SSID "+mSSID+" password "+mPassword+" inetaddress "+mInetAddress);
+        Log.d(TAG,"Add local service SSID "+mSSID+" password "+mPassword);
         wifiP2pManager.addLocalService(mChannel, service, new WifiP2pManager.ActionListener() {
             public void onSuccess() {
                 Log.d(TAG,"Added local service");
@@ -182,16 +172,6 @@ class ServiceAdvertiser extends AsyncTask<Void,Void,Void> implements WifiP2pMana
         public void onReceive(Context context, Intent intent) {
             Log.d(TAG, "onReceive: ");
             final String action = intent.getAction();
-            if (WifiP2pManager.WIFI_P2P_STATE_CHANGED_ACTION.equals(action)) {
-                int state = intent.getIntExtra(WifiP2pManager.EXTRA_WIFI_STATE, -1);
-                if (state == WifiP2pManager.WIFI_P2P_STATE_ENABLED) {
-                    // Wifi P2P is enabled
-                    Log.d(TAG,"Wifi P2P enabled");
-                } else {
-                    // Wi-Fi P2P is not enabled
-                    Log.d(TAG,"Wifi P2P not enabled");
-                }
-            }
             if(WifiP2pManager.WIFI_P2P_CONNECTION_CHANGED_ACTION.equals(action)){
                 Log.d(TAG,"Wifi P2P P2pConnection Changed Action");
                 getGroupInfo();
@@ -209,60 +189,9 @@ class ServiceAdvertiser extends AsyncTask<Void,Void,Void> implements WifiP2pMana
                     Log.d(TAG,"onGroupInfoAvailable");
                     mSSID = wifiP2pGroup.getNetworkName();
                     mPassword = wifiP2pGroup.getPassphrase();
-                    getExtraGroupInfo();
-                }
-            });
-        }
-
-        private void getExtraGroupInfo(){
-            wifiP2pManager.requestConnectionInfo(mChannel, new WifiP2pManager.ConnectionInfoListener() {
-                @Override
-                public void onConnectionInfoAvailable(WifiP2pInfo wifiP2pInfo) {
-                    if(wifiP2pInfo==null || wifiP2pInfo.groupOwnerAddress==null) {
-                        Log.d(TAG, "onConnectionInfoAvailable: null");
-                        return;
-                    }
-                    mInetAddress = wifiP2pInfo.groupOwnerAddress.getHostAddress();
-                    Log.d(TAG, "onConnectionInfoAvailable: "+mInetAddress);
-                    if(advertising)
-                        return;
-                    advertising = true;
                     startLocalService();
-                    server = new ServerSocketAsync();
-                    server.executeOnExecutor(THREAD_POOL_EXECUTOR);
                 }
             });
-
-        }
-    }
-
-    private class ServerSocketAsync extends AsyncTask<Void, Void, Void> {
-        @Override
-        public Void doInBackground(Void... params){
-            try {
-                Log.d(TAG, "start server socket");
-                // 1 needs to be changed to a higher number for group chats
-                serverSocket = new ServerSocket(P2pConnection.PORT);//,1,InetAddress.getByName(mInetAddress));
-                Log.d(TAG, "doInBackground: "+serverSocket.getInetAddress().getHostAddress());
-                while (true) {
-                    try {
-                        serverSocket.accept();
-                        Log.d(TAG, "socket.accept");
-                    } catch (IOException e) {
-                        e.printStackTrace();
-                        serverSocket.close();
-                        break;
-                    }
-                }
-            }catch (IOException e){
-                e.printStackTrace();
-            }
-            return null;
-        }
-
-        @Override
-        public void onPostExecute(Void v){
-            Log.d("ServerSocketAsync", "onPostExecute: ");
         }
     }
 }

@@ -7,5 +7,7 @@ import android.support.v7.app.AppCompatActivity;
  */
 
 public abstract class P2pActivity extends AppCompatActivity {
-    public abstract void notifyChange(String text);
+    public abstract void notifyChange(String peer);
+    public abstract void connected(String hostAddress);
+    public abstract void messageReceived(String message);
 }

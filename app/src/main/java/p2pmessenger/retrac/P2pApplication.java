@@ -22,7 +22,6 @@ class P2pApplication extends Application {
 
     ServiceSearcher serviceSearcher;
     ServiceAdvertiser serviceAdvertiser;
-    P2pConnection connection;
 
     private P2pApplication(){
         peers = new ArrayList<>();
@@ -62,10 +61,6 @@ class P2pApplication extends Application {
         // FIXME
     }
 
-    public void setConnection(P2pConnection connection){
-        this.connection = connection;
-    }
-
     public void start(){
         Log.d(TAG, "start: ");
         serviceSearcher = new ServiceSearcher(mActivity.getApplicationContext());
@@ -77,9 +72,6 @@ class P2pApplication extends Application {
     public void stop(){
         Log.d(TAG, "stop: ");
         stopDiscovery();
-        if(connection!=null){
-            connection.stop();
-        }
         try {
             serviceAdvertiser.stop();
         }catch (NullPointerException e){
