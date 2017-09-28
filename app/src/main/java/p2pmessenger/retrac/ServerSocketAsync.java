@@ -68,6 +68,7 @@ public class ServerSocketAsync extends AsyncTask<Void, Void, String> {
         Log.d(TAG, "onPostExecute: "+result);
         try{
             serverSocket.close();
+            Log.d(TAG, "onPostExecute: server socket closed");
         }
         catch (IOException e){
             e.printStackTrace();

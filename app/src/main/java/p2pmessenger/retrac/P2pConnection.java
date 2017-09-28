@@ -51,5 +51,6 @@ class P2pConnection {
         this.netId = this.mWifiManager.addNetwork(this.mWifiConfiguration);
         this.mWifiManager.enableNetwork(this.netId, false);
         this.mWifiManager.reconnect();
+        Log.d(TAG, "P2pConnection: ready");
     }
 }

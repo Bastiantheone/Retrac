@@ -17,6 +17,7 @@ import java.util.Map;
 class P2pApplication extends Application {
     private static final String TAG = "P2pApplication";
     private static P2pApplication app;
+    protected String username;
     P2pActivity mActivity;
     List<Map<String, String>> peers;
 

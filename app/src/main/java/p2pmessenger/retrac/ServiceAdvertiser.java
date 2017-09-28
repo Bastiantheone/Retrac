@@ -118,8 +118,7 @@ class ServiceAdvertiser extends AsyncTask<Void,Void,Void> implements WifiP2pMana
     // can connect to this phone without user interaction.
     private void startLocalService(){
         Map<String, String> record = new HashMap<String, String>();
-        // Todo add username here
-        record.put(NAME,"test username");
+        record.put(NAME,P2pApplication.get().username);
         record.put(SSID,mSSID);
         record.put(PASSWORD,mPassword);
 
