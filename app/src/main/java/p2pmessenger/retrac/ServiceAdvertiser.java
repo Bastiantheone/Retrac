@@ -20,6 +20,7 @@ import java.net.InetSocketAddress;
 import java.net.ServerSocket;
 import java.net.Socket;
 import java.util.HashMap;
+import java.util.Iterator;
 import java.util.Map;
 
 import static android.net.wifi.p2p.WifiP2pManager.WIFI_P2P_CONNECTION_CHANGED_ACTION;
@@ -38,6 +39,9 @@ class ServiceAdvertiser extends AsyncTask<Void,Void,Void> implements WifiP2pMana
     static final String SSID = "ssid";
     static final String PASSWORD = "password";
     static final String NAME = "name";
+    static final String NEIGHBORS = "neighbors";
+    static final String DIRECT = "direct";
+    static final String ADDRESS = "address";
 
     private WifiP2pManager wifiP2pManager;
     private WifiP2pManager.Channel mChannel;
@@ -48,6 +52,7 @@ class ServiceAdvertiser extends AsyncTask<Void,Void,Void> implements WifiP2pMana
 
     private String mSSID;
     private String mPassword = "";
+    private String mAddress = "";
 
     ServiceAdvertiser(Context context) {
         this.mContext = context;
@@ -121,6 +126,16 @@ class ServiceAdvertiser extends AsyncTask<Void,Void,Void> implements WifiP2pMana
         record.put(NAME,P2pApplication.get().username);
         record.put(SSID,mSSID);
         record.put(PASSWORD,mPassword);
+        record.put(ADDRESS, mAddress);
+        String neighbors = "-";
+        for(Map<String,String> peer : P2pApplication.get().peers){
+            neighbors += peer.get(NAME) + "-";
+            Log.d(TAG, "startLocalService: neighbor "+peer.get(NAME));
+            if(neighbors.getBytes().length>=255){
+                neighbors = neighbors.substring(0,neighbors.length()-peer.get(NAME).length()-1);
+            }
+        }
+        record.put(NEIGHBORS, neighbors);
 
         WifiP2pDnsSdServiceInfo service = WifiP2pDnsSdServiceInfo.newInstance( INSTANCE_NAME, SERVICE_TYPE, record);
 
@@ -149,7 +164,7 @@ class ServiceAdvertiser extends AsyncTask<Void,Void,Void> implements WifiP2pMana
 
     }
 
-    private void removeGroup() {
+    public void removeGroup() {
         wifiP2pManager.removeGroup(mChannel,new WifiP2pManager.ActionListener() {
             public void onSuccess() {
                 Log.d(TAG, "Cleared Local Group ");
@@ -188,7 +203,14 @@ class ServiceAdvertiser extends AsyncTask<Void,Void,Void> implements WifiP2pMana
                     Log.d(TAG,"onGroupInfoAvailable");
                     mSSID = wifiP2pGroup.getNetworkName();
                     mPassword = wifiP2pGroup.getPassphrase();
-                    startLocalService();
+                    wifiP2pManager.requestConnectionInfo(mChannel, new WifiP2pManager.ConnectionInfoListener() {
+                        @Override
+                        public void onConnectionInfoAvailable(WifiP2pInfo wifiP2pInfo) {
+                            Log.d(TAG, "onConnectionInfoAvailable: ");
+                            mAddress = wifiP2pInfo.groupOwnerAddress.getHostAddress();
+                            startLocalService();
+                        }
+                    });
                 }
             });
         }

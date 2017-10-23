@@ -74,7 +74,18 @@ public class ServerSocketAsync extends AsyncTask<Void, Void, String> {
             e.printStackTrace();
         }
         if(result!=null) {
-            P2pApplication.get().mActivity.messageReceived(result);
+            if(result.startsWith(P2pActivity.MESSAGE))
+                P2pApplication.get().mActivity.messageReceived(result.substring(1));
+            else if(result.startsWith(P2pActivity.ADDRESS))
+                P2pApplication.get().mActivity.groupOwnerConnected(address);
+            else if(result.startsWith(P2pActivity.FORWARD)) {
+                int i = result.indexOf(P2pActivity.FORWARD, 2);
+                int j = result.indexOf(P2pActivity.FORWARD, i+2);
+                String target = result.substring(1,i);
+                String from = result.substring(i+1, j);
+                String message = result.substring(j+1);
+                P2pApplication.get().mActivity.forwardMessage(target, from, message);
+            }
         }
     }
 }
