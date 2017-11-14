@@ -1,8 +1,10 @@
 package p2pmessenger.retrac;
 
+import android.content.Context;
 import android.content.Intent;
 import android.content.IntentFilter;
 import android.content.SharedPreferences;
+import android.net.wifi.WifiConfiguration;
 import android.net.wifi.WifiManager;
 import android.net.wifi.p2p.WifiP2pDevice;
 import android.net.wifi.p2p.WifiP2pInfo;
@@ -23,6 +25,7 @@ import android.widget.Toast;
 
 import java.net.InetAddress;
 import java.util.ArrayList;
+import java.util.List;
 import java.util.Map;
 import java.util.logging.Handler;
 
@@ -44,6 +47,7 @@ public class ConnectsActivity extends P2pActivity {
     boolean forwardNameSelected;
     SharedPreferences sharedPreferences;
     private final static String USERNAME_PREFERENCE = "username";
+    boolean clickedOnce;
 
     @Override
     protected void onCreate(Bundle savedInstanceState) {
@@ -65,6 +69,8 @@ public class ConnectsActivity extends P2pActivity {
 
         peers = new ArrayList<>();
         selected = -1;
+
+        clickedOnce = false;
 
         adapter = new ArrayAdapter<String>(this,android.R.layout.simple_spinner_dropdown_item,peers);
         mSpinner.setAdapter(adapter);
@@ -106,6 +112,19 @@ public class ConnectsActivity extends P2pActivity {
             public void onClick(View view) {
                 P2pApplication.get().stop();
                 P2pApplication.get().start();
+                if(clickedOnce){
+                    Log.d(TAG, "onClick: stop and delete");
+                    clickedOnce = false;
+                    WifiManager wifiManager = (WifiManager)getApplicationContext().getSystemService(Context.WIFI_SERVICE);
+                    List<WifiConfiguration> list = wifiManager.getConfiguredNetworks();
+                    for( WifiConfiguration i : list ) {
+                        wifiManager.removeNetwork(i.networkId);
+                        wifiManager.saveConfiguration();
+                    }
+                }else{
+                    Log.d(TAG, "onClick: stopped");
+                    clickedOnce = true;
+                }
             }
         });
 
@@ -168,6 +187,7 @@ public class ConnectsActivity extends P2pActivity {
 
     public void sendIndirect(String message, String target, String address){
         Log.d(TAG, "sendIndirect: "+message);
+        Log.d(TAG, "sendIndirect: to "+target);
         Intent intent = new Intent(getBaseContext(),TransferMessageService.class);
         intent.setAction(TransferMessageService.ACTION_SEND_MESSAGE);
         Bundle bundle = new Bundle();

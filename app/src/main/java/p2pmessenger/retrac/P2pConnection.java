@@ -65,7 +65,7 @@ class P2pConnection {
             }
         });
         android.os.Handler handler = new android.os.Handler();
-        handler.postDelayed(runnable, 10000);
+        handler.postDelayed(runnable, 12000);
     }
 
     private Runnable runnable = new Runnable() {

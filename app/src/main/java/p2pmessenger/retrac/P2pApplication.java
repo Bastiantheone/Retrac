@@ -2,6 +2,9 @@ package p2pmessenger.retrac;
 
 import android.app.Activity;
 import android.app.Application;
+import android.content.Context;
+import android.net.wifi.WifiConfiguration;
+import android.net.wifi.WifiManager;
 import android.net.wifi.p2p.WifiP2pDevice;
 import android.os.AsyncTask;
 import android.util.Log;
@@ -40,23 +43,20 @@ class P2pApplication extends Application {
         return app;
     }
 
-    void connected(Socket socket){
-        
-    }
-
     void updateActivity(P2pActivity activity){
         this.mActivity = activity;
     }
 
     void addPeer(Map<String, String> record){
         // FIXME add time stamp and add regular check to see if service is still advertised
+        Log.d(TAG, "addPeer: "+record.toString());
         record.put(ServiceAdvertiser.DIRECT, "T");
         int ind = 0;
         boolean exists = false;
         for(Map<String, String> item : peers){
             if(item.get(ServiceAdvertiser.NAME).equals(record.get(ServiceAdvertiser.NAME))){
                 // updating the record instead of creating a new one
-                peers.add(ind,record);
+                peers.set(ind,record);
                 exists = true;
                 break;
             }
@@ -82,7 +82,7 @@ class P2pApplication extends Application {
                             newRecord.put(ServiceAdvertiser.PASSWORD, record.get(ServiceAdvertiser.PASSWORD));
                             newRecord.put(ServiceAdvertiser.ADDRESS, record.get(ServiceAdvertiser.ADDRESS));
                             newRecord.put(ServiceAdvertiser.DIRECT, "F");
-                            peers.add(ind, newRecord);
+                            peers.set(ind, newRecord);
                         }
                         break;
                     }

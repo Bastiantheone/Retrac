@@ -9,6 +9,7 @@ import android.net.wifi.p2p.WifiP2pInfo;
 import android.net.wifi.p2p.WifiP2pManager;
 import android.net.wifi.p2p.nsd.WifiP2pDnsSdServiceInfo;
 import android.os.AsyncTask;
+import android.os.Handler;
 import android.util.Log;
 
 import java.io.BufferedReader;
@@ -33,6 +34,7 @@ import static android.net.wifi.p2p.WifiP2pManager.WIFI_P2P_STATE_CHANGED_ACTION;
 // ServiceAdvertiser receives broadcasts when the status changed.
 class ServiceAdvertiser extends AsyncTask<Void,Void,Void> implements WifiP2pManager.ChannelListener{
     private static final String TAG = "ServiceAdvertiser";
+    static final int SERVICE_Advertisement_INTERVAL = 60000;
 
     static final String SERVICE_TYPE = "_presence._tcp";
     static final String INSTANCE_NAME = "_retrac";
@@ -47,6 +49,9 @@ class ServiceAdvertiser extends AsyncTask<Void,Void,Void> implements WifiP2pMana
     private WifiP2pManager.Channel mChannel;
     private BroadcastReceiver mReceiver;
     private IntentFilter mIntentFilter;
+
+    private Runnable getmServiceAdvertisementRunnable;
+    private boolean run = true;
 
     private Context mContext;
 
@@ -65,6 +70,7 @@ class ServiceAdvertiser extends AsyncTask<Void,Void,Void> implements WifiP2pMana
     }
 
     private void start(){
+        run = true;
         wifiP2pManager = (WifiP2pManager) mContext.getSystemService(Context.WIFI_P2P_SERVICE);
         if(wifiP2pManager == null){
             Log.d(TAG,"Device doesn't support P2P");
@@ -103,6 +109,7 @@ class ServiceAdvertiser extends AsyncTask<Void,Void,Void> implements WifiP2pMana
     }
 
     public void stopKeepGroup(){
+        run = false;
         Log.d(TAG, "stopKeepGroup: ");
         try {
             this.mContext.unregisterReceiver(mReceiver);
@@ -113,6 +120,7 @@ class ServiceAdvertiser extends AsyncTask<Void,Void,Void> implements WifiP2pMana
     }
 
     public void stop() {
+        run = false;
         stopKeepGroup();
         removeGroup();
     }
@@ -124,6 +132,7 @@ class ServiceAdvertiser extends AsyncTask<Void,Void,Void> implements WifiP2pMana
     private void startLocalService(){
         Map<String, String> record = new HashMap<String, String>();
         record.put(NAME,P2pApplication.get().username);
+        Log.d(TAG, "startLocalService: "+P2pApplication.get().username);
         record.put(SSID,mSSID);
         record.put(PASSWORD,mPassword);
         record.put(ADDRESS, mAddress);
@@ -143,18 +152,32 @@ class ServiceAdvertiser extends AsyncTask<Void,Void,Void> implements WifiP2pMana
         wifiP2pManager.addLocalService(mChannel, service, new WifiP2pManager.ActionListener() {
             public void onSuccess() {
                 Log.d(TAG,"Added local service");
+                Handler handler = new Handler();
+                handler.postDelayed(mServiceAdvertisementRunnable,SERVICE_Advertisement_INTERVAL);
             }
 
             public void onFailure(int reason) {
                 Log.d(TAG,"Adding local service failed, error code " + reason);
             }
         });
+
     }
+
+    private Runnable mServiceAdvertisementRunnable = new Runnable() {
+        @Override
+        public void run() {
+            if(run) {
+                stopLocalServices();
+            }
+        }
+    };
 
     private void stopLocalServices() {
         wifiP2pManager.clearLocalServices(mChannel, new WifiP2pManager.ActionListener() {
             public void onSuccess() {
                 Log.d(TAG, "Cleared local services");
+                if(run)
+                    startLocalService();
             }
 
             public void onFailure(int reason) {

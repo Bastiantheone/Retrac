@@ -37,6 +37,7 @@ public class TransferMessageService extends IntentService {
         Context context = getApplicationContext();
         if(intent.getAction().equals(ACTION_SEND_MESSAGE)){
             String message = intent.getExtras().getString(EXTRAS_MESSAGE);
+            Log.d(TAG, "onHandleIntent: "+message);
             String host = intent.getExtras().getString(EXTRAS_ADDRESS);
             int port = intent.getExtras().getInt(EXTRAS_PORT);
             Socket socket = new Socket();
